@@ -1,0 +1,66 @@
+NTL_ZONAL_TIMESERIES_DF = bm.extract(
+    gdf,
+    "VNP46A3",
+    pd.date_range("2024-06-15", "2025-05-15", freq="MS").date.tolist(),
+)
+
+data = NTL_ZONAL_TIMESERIES_DF.pivot_table(
+    index="date",
+    columns="NAM_1",
+    values="ntl_sum",
+    aggfunc="sum",
+).sort_index()
+
+p = figure(
+    title="Nighttime Lights Radiance Over Time",
+    width=760,
+    height=600,
+    x_axis_label="Month",
+    x_axis_type="datetime",
+    y_axis_type="log",
+    y_axis_label="NTL Radiance (log scale)",
+    tools="pan,wheel_zoom,box_zoom,reset,save",
+)
+
+p.add_layout(
+    Title(
+        text=(
+            "Source: NASA Black Marble (VNP46A3). "
+            f"Generated on {datetime.datetime.today():%d %B %Y}."
+        ),
+        text_font_size="10pt",
+        text_font_style="italic",
+    ),
+    "below",
+)
+
+p.add_tools(
+    HoverTool(
+        tooltips=[
+            ("Region", "$name"),
+            ("Month", "@x{%F}"),
+            ("Radiance", "@y{0.2f}"),
+        ],
+        formatters={"@x": "datetime"},
+        mode="vline",
+    )
+)
+
+for region, color in zip(data.columns, cc.glasbey):
+    line = p.line(
+        data.index,
+        data[region],
+        line_color=color,
+        line_width=2,
+        line_dash="solid",
+        legend_label=region,
+        name=region,
+    )
+
+p.legend.click_policy = "hide"
+p.legend.location = "center_right"
+p.title.text_font_size = "16pt"
+p.add_layout(p.legend[0], "right")
+
+output_notebook()
+show(p)
